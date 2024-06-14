@@ -31,35 +31,42 @@ def main(mouse: "Point | None"):
     vis.draw()
     h = vis.height()
 
+
+
+    # for i in range(1, 9):
+    #     edge = (vis[0], vis[2])
+    #     n = normalized(edge[0] - edge[1])
+    #     n[0], n[1] = n[1], -n[0]
+    #
+    #     delta = n * i / 8 * vis.height()
+    #
+    #     draw.line(screen, "green", edge[0] + delta, edge[1] + delta)
+    #
+    # for i in range(1, 9):
+    #     edge = (vis[2], vis[1])
+    #     n = normalized(edge[0] - edge[1])
+    #     n[0], n[1] = n[1], -n[0]
+    #
+    #     delta = n * i / 8 * vis.height()
+    #
+    #     draw.line(screen, "teal", edge[0] + delta, edge[1] + delta)
+    #
+    # for i in range(1, 9):
+    #     edge = (vis[1], vis[0])
+    #     n = normalized(edge[0] - edge[1])
+    #     n[0], n[1] = n[1], -n[0]
+    #
+    #     delta = n * i / 8 * vis.height()
+    #
+    #     draw.line(screen, "lavender", edge[0] + delta, edge[1] + delta)
+
     if mouse is not None:
-        log(f"Coord: {vis.coords(mouse, 8)}")
-
-    for i in range(1, 9):
-        edge = (vis[0], vis[2])
-        n = normalized(edge[0] - edge[1])
-        n[0], n[1] = n[1], -n[0]
-
-        delta = n * i / 8 * vis.height()
-
-        draw.line(screen, "green", edge[0] + delta, edge[1] + delta)
-
-    for i in range(1, 9):
-        edge = (vis[2], vis[1])
-        n = normalized(edge[0] - edge[1])
-        n[0], n[1] = n[1], -n[0]
-
-        delta = n * i / 8 * vis.height()
-
-        draw.line(screen, "teal", edge[0] + delta, edge[1] + delta)
-
-    for i in range(1, 9):
-        edge = (vis[1], vis[0])
-        n = normalized(edge[0] - edge[1])
-        n[0], n[1] = n[1], -n[0]
-
-        delta = n * i / 8 * vis.height()
-
-        draw.line(screen, "lavender", edge[0] + delta, edge[1] + delta)
+        t = vis
+        for _ in range(7):
+            c = t.coords(mouse, 8)
+            log(f"Coord: {c}")
+            t = t.inner_tri(c, 8)
+            t.draw('white')
 
 
 # ================================================================================
@@ -112,13 +119,32 @@ class Triangle:
 
         return np.array(res)
 
-    def draw(self):
+    def draw(self, color='red'):
         for start, end in pairwise(self.vertices + [self.vertices[0]]):
-            draw.line(screen, "red", start, end)
+            draw.line(screen, color, start, end)
 
     def height(self):
         a = np.linalg.norm(self.vertices[0] - self.vertices[1])
         return math.sqrt(3) / 2 * a
+
+    def inner_tri(self, coords: np.ndarray, scale: int) -> 'Triangle':
+        f = self.height()/scale
+        is_upper = sum(coords) == (scale-1)
+
+        if is_upper:
+            l0 = self.edge(0).shift(coords[0] * f)
+            l1 = self.edge(1).shift(coords[1] * f)
+            l2 = self.edge(2).shift(coords[2] * f)
+        else:
+            l0 = self.edge(0).shift(( coords[0] +1) * f)
+            l1 = self.edge(1).shift(( coords[1] +1) * f)
+            l2 = self.edge(2).shift(( coords[2] +1) * f)
+
+        return Triangle([
+            l0.intersect(l1),
+            l1.intersect(l2),
+            l2.intersect(l0)
+        ])
 
     def __mul__(self, f):
         center = sum(self.vertices) / len(self.vertices)
@@ -161,8 +187,20 @@ class Line:
     def draw(self, color):
         draw.line(screen, color, self.start, self.end)
 
-    def intersect(self, other: Line) -> Point:
-        pass
+    def intersect(self, other: 'Line') -> Point:
+        x1,y1 = self.start
+        x2,y2 = self.end
+        x3,y3 = other.start
+        x4,y4 = other.end
+
+        x = ((x2-x1)*(x3*y4-y3*x4)-(x4-x3)*(x1*y2-y1*x2))/((x2-x1)*(y4-y3) - (y2-y1)*(x4-x3))
+        y = ((y2-y1)*(x3*y4-y3*x4)-(y4-y3)*(x1*y2-y1*x2))/((x2-x1)*(y4-y3) - (y2-y1)*(x4-x3))
+
+        return np.array([x,y])
+
+    def shift(self, distance: float) -> 'Line':
+        delta = self.normal() * distance
+        return Line(self.start + delta, self.end + delta)
 
 
 font = pygame.font.SysFont(None, 48)
