@@ -29,6 +29,10 @@ def main(mouse: "Point | None"):
     log(f"Center: {center}")
     log(f"Mouse: {mouse}")
     vis.draw()
+    h = vis.height()
+
+    if mouse is not None:
+        log(f"Coord: {vis.coords(mouse, 8)}")
 
     for i in range(1, 9):
         edge = (vis[0], vis[2])
@@ -88,6 +92,26 @@ class Triangle:
             ]
         )
 
+    def edge(self, i) -> "Line":
+        match i:
+            case 0:
+                return Line(self[0], self[1])
+            case 1:
+                return Line(self[1], self[2])
+            case 2:
+                return Line(self[2], self[0])
+
+    def coords(self, p: Point, scale: int) -> np.ndarray:
+        h = self.height() / scale
+        res = []
+        for i in range(3):
+            edge = self.edge(i)
+            d = edge.distance(p)
+            c = int(d / h)
+            res.append(c)
+
+        return np.array(res)
+
     def draw(self):
         for start, end in pairwise(self.vertices + [self.vertices[0]]):
             draw.line(screen, "red", start, end)
@@ -117,6 +141,28 @@ class Plane:
 
     def __post_init__(self):
         self.normal = self.normal / np.linalg.norm(self.normal)
+
+
+@dataclass
+class Line:
+    start: Point
+    end: Point
+
+    def normal(self) -> np.ndarray:
+        n = normalized(self.end - self.start)
+        n[0], n[1] = n[1], -n[0]
+
+        return n
+
+    def distance(self, p: Point) -> float:
+        delta = p - self.start
+        return self.normal().dot(delta)
+
+    def draw(self, color):
+        draw.line(screen, color, self.start, self.end)
+
+    def intersect(self, other: Line) -> Point:
+        pass
 
 
 font = pygame.font.SysFont(None, 48)
