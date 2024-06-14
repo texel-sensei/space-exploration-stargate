@@ -16,7 +16,7 @@ triangle_center_direction = np.array(
     [0.85296865578697, 0.3373248250886, -0.39831700267993]
 )
 
-goal_direction = -np.array([-0.93775912744763, -0.30188301187802, -0.17168129291553])
+goal_direction = -np.array([-0.93775912744763, -0.30188301187802, 0.17168129291553])
 
 
 def main(mouse: "Point | None"):
@@ -24,14 +24,35 @@ def main(mouse: "Point | None"):
     show_point(center)
     vis = Triangle.from_center(center, 500)
 
-    # triangle_plane = Plane(triangle_center_direction, 1)
+    triangle_plane = Plane(triangle_center_direction, 1)
+
+    tri_on_plane = Triangle(
+        [
+            triangle_plane.project_point(upper_vertex_direction),
+            triangle_plane.project_point(left_vertex_direction),
+            triangle_plane.project_point(right_vertex_direction),
+        ]
+    )
+    target_point = triangle_plane.project_point(goal_direction)
+
+    bar = tri_on_plane.barycentric(target_point)
+
+    projected = vis.from_barycentric(bar)
+    show_point(projected)
+
+    t = vis
+    scale = 8
+    for _ in range(7):
+        c = t.coords(projected, scale)
+        t.draw("white")
+        log(f"Coord: {c}")
+        t = t.inner_tri(c, scale)
 
     log(f"Center: {center}")
     log(f"Mouse: {mouse}")
     vis.draw()
+    vis.draw_normal("green")
     h = vis.height()
-
-
 
     # for i in range(1, 9):
     #     edge = (vis[0], vis[2])
@@ -60,13 +81,14 @@ def main(mouse: "Point | None"):
     #
     #     draw.line(screen, "lavender", edge[0] + delta, edge[1] + delta)
 
-    if mouse is not None:
+    if mouse is not None and vis.is_inside(mouse):
+        scale = 8
         t = vis
         for _ in range(7):
-            c = t.coords(mouse, 8)
+            c = t.coords(mouse, scale)
             log(f"Coord: {c}")
-            t = t.inner_tri(c, 8)
-            t.draw('white')
+            t = t.inner_tri(c, scale)
+            t.draw("white")
 
 
 # ================================================================================
@@ -119,7 +141,7 @@ class Triangle:
 
         return np.array(res)
 
-    def draw(self, color='red'):
+    def draw(self, color="red"):
         for start, end in pairwise(self.vertices + [self.vertices[0]]):
             draw.line(screen, color, start, end)
 
@@ -127,24 +149,53 @@ class Triangle:
         a = np.linalg.norm(self.vertices[0] - self.vertices[1])
         return math.sqrt(3) / 2 * a
 
-    def inner_tri(self, coords: np.ndarray, scale: int) -> 'Triangle':
-        f = self.height()/scale
-        is_upper = sum(coords) == (scale-1)
+    def inner_tri(self, coords: np.ndarray, scale: int) -> "Triangle":
+        f = self.height() / scale
+        is_upper = sum(coords) == (scale - 1)
 
         if is_upper:
             l0 = self.edge(0).shift(coords[0] * f)
             l1 = self.edge(1).shift(coords[1] * f)
             l2 = self.edge(2).shift(coords[2] * f)
         else:
-            l0 = self.edge(0).shift(( coords[0] +1) * f)
-            l1 = self.edge(1).shift(( coords[1] +1) * f)
-            l2 = self.edge(2).shift(( coords[2] +1) * f)
+            l0 = self.edge(0).shift((coords[0] + 1) * f)
+            l1 = self.edge(1).shift((coords[1] + 1) * f)
+            l2 = self.edge(2).shift((coords[2] + 1) * f)
 
-        return Triangle([
-            l0.intersect(l1),
-            l1.intersect(l2),
-            l2.intersect(l0)
-        ])
+        return Triangle([l0.intersect(l1), l1.intersect(l2), l2.intersect(l0)])
+
+    def is_inside(self, p: Point) -> bool:
+        for i in range(3):
+            e = self.edge(i)
+            d = p - e.start
+            if e.normal().dot(d) < 0:
+                return False
+
+        return True
+
+    def draw_normal(self, color):
+        for i in range(3):
+            self.edge(i).draw_normal(color)
+
+    def barycentric(self, p: Point) -> np.ndarray:
+        a, b, c = self.vertices
+        v0 = b - a
+        v1 = c - a
+        v2 = p - a
+        d00 = v0.dot(v0)
+        d01 = v0.dot(v1)
+        d11 = v1.dot(v1)
+        d20 = v2.dot(v0)
+        d21 = v2.dot(v1)
+        denom = d00 * d11 - d01 * d01
+        v = (d11 * d20 - d01 * d21) / denom
+        w = (d00 * d21 - d01 * d20) / denom
+        u = 1 - v - w
+        return np.array([u, v, w])
+
+    def from_barycentric(self, bar: np.ndarray) -> Point:
+        a, b, c = self.vertices
+        return a * bar[0] + b * bar[1] + c * bar[2]
 
     def __mul__(self, f):
         center = sum(self.vertices) / len(self.vertices)
@@ -168,6 +219,18 @@ class Plane:
     def __post_init__(self):
         self.normal = self.normal / np.linalg.norm(self.normal)
 
+    def project_point(self, dir: np.ndarray) -> Point:
+        ray_origin = np.zeros(3)
+
+        denom = self.normal.dot(dir)
+        assert abs(denom) > 0.0001
+
+        plane_center = self.normal * self.dist
+        diff = plane_center - ray_origin
+        t = diff.dot(self.normal) / denom
+
+        return ray_origin + dir * t
+
 
 @dataclass
 class Line:
@@ -187,18 +250,27 @@ class Line:
     def draw(self, color):
         draw.line(screen, color, self.start, self.end)
 
-    def intersect(self, other: 'Line') -> Point:
-        x1,y1 = self.start
-        x2,y2 = self.end
-        x3,y3 = other.start
-        x4,y4 = other.end
+    def draw_normal(self, color):
+        start = (self.start + self.end) / 2
+        end = start + self.normal() * 50
+        draw.line(screen, color, start, end)
 
-        x = ((x2-x1)*(x3*y4-y3*x4)-(x4-x3)*(x1*y2-y1*x2))/((x2-x1)*(y4-y3) - (y2-y1)*(x4-x3))
-        y = ((y2-y1)*(x3*y4-y3*x4)-(y4-y3)*(x1*y2-y1*x2))/((x2-x1)*(y4-y3) - (y2-y1)*(x4-x3))
+    def intersect(self, other: "Line") -> Point:
+        x1, y1 = self.start
+        x2, y2 = self.end
+        x3, y3 = other.start
+        x4, y4 = other.end
 
-        return np.array([x,y])
+        x = ((x2 - x1) * (x3 * y4 - y3 * x4) - (x4 - x3) * (x1 * y2 - y1 * x2)) / (
+            (x2 - x1) * (y4 - y3) - (y2 - y1) * (x4 - x3)
+        )
+        y = ((y2 - y1) * (x3 * y4 - y3 * x4) - (y4 - y3) * (x1 * y2 - y1 * x2)) / (
+            (x2 - x1) * (y4 - y3) - (y2 - y1) * (x4 - x3)
+        )
 
-    def shift(self, distance: float) -> 'Line':
+        return np.array([x, y])
+
+    def shift(self, distance: float) -> "Line":
         delta = self.normal() * distance
         return Line(self.start + delta, self.end + delta)
 
