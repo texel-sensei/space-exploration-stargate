@@ -1,0 +1,32 @@
+[project]
+name = "stargate"
+version = "0.1.0"
+description = "Add your description here"
+authors = [
+    { name = "texel", email = "texelsensei@posteo.net" }
+]
+dependencies = [
+    "numpy>=1.26.4",
+    "pygame>=2.5.2",
+]
+readme = "README.md"
+requires-python = ">= 3.8"
+
+[project.scripts]
+"stargate" = "stargate:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.rye]
+managed = true
+dev-dependencies = [
+    "neovim>=0.3.1",
+]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/stargate"]
