@@ -8,8 +8,12 @@ import numpy as np
 
 upper_vertex_direction = np.array([0.8506508337159, 0, -0.52573107107952])
 left_vertex_direction = np.array([0.93417235727245, 0.35682209419822, 0])
-right_vertex_direction = np.array([0.57735041155694, 0.57735018458227, -0.57735021142964])
-triangle_center_direction = np.array([0.85296865578697, 0.3373248250886, -0.39831700267993])
+right_vertex_direction = np.array(
+    [0.57735041155694, 0.57735018458227, -0.57735021142964]
+)
+triangle_center_direction = np.array(
+    [0.85296865578697, 0.3373248250886, -0.39831700267993]
+)
 
 goal_direction = -np.array([-0.93775912744763, -0.30188301187802, 0.17168129291553])
 
@@ -40,8 +44,6 @@ points_on_105 = [
 ]
 
 
-
-
 def main(mouse: "Point | None"):
     center = pt(500, 500)
     show_point(center)
@@ -60,8 +62,12 @@ def main(mouse: "Point | None"):
 
     def draw_tested(points: list[np.ndarray]):
         for i in range(len(points) - 1):
-            start = vis.from_barycentric(tri_on_plane.barycentric(triangle_plane.project_point(points[i])))
-            end = vis.from_barycentric(tri_on_plane.barycentric(triangle_plane.project_point(points[i + 1])))
+            start = vis.from_barycentric(
+                tri_on_plane.barycentric(triangle_plane.project_point(points[i]))
+            )
+            end = vis.from_barycentric(
+                tri_on_plane.barycentric(triangle_plane.project_point(points[i + 1]))
+            )
             draw.line(screen, "green", start, end)
 
     draw_tested(points_on_070)
@@ -296,10 +302,10 @@ class Line:
         x4, y4 = other.end
 
         x = ((x2 - x1) * (x3 * y4 - y3 * x4) - (x4 - x3) * (x1 * y2 - y1 * x2)) / (
-                (x2 - x1) * (y4 - y3) - (y2 - y1) * (x4 - x3)
+            (x2 - x1) * (y4 - y3) - (y2 - y1) * (x4 - x3)
         )
         y = ((y2 - y1) * (x3 * y4 - y3 * x4) - (y4 - y3) * (x1 * y2 - y1 * x2)) / (
-                (x2 - x1) * (y4 - y3) - (y2 - y1) * (x4 - x3)
+            (x2 - x1) * (y4 - y3) - (y2 - y1) * (x4 - x3)
         )
 
         return np.array([x, y])

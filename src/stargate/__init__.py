@@ -4,7 +4,6 @@ import importlib
 import pygame
 
 
-
 def main() -> int:
     pygame.init()
 
