@@ -6,17 +6,40 @@ import pygame
 from pygame import draw
 import numpy as np
 
-
 upper_vertex_direction = np.array([0.8506508337159, 0, -0.52573107107952])
 left_vertex_direction = np.array([0.93417235727245, 0.35682209419822, 0])
-right_vertex_direction = np.array(
-    [0.57735041155694, 0.57735018458227, -0.57735021142964]
-)
-triangle_center_direction = np.array(
-    [0.85296865578697, 0.3373248250886, -0.39831700267993]
-)
+right_vertex_direction = np.array([0.57735041155694, 0.57735018458227, -0.57735021142964])
+triangle_center_direction = np.array([0.85296865578697, 0.3373248250886, -0.39831700267993])
 
 goal_direction = -np.array([-0.93775912744763, -0.30188301187802, 0.17168129291553])
+
+points_on_070 = [
+    np.array([0.86880679636461, 0.053744337006915, -0.49222585957094]),  # 205
+    np.array([0.86242823714895, 0.057787140581026, -0.50286994556408]),  # 304
+    np.array([0.83546825365882, 0.073846273919835, -0.54455442791004]),  # 700
+]
+
+points_on_222 = [
+    np.array([0.84478490154347, 0.37966205311477, -0.37708778228532]),  # 007
+    np.array([0.87942553666472, 0.30063274350054, -0.36909440390951]),  # 700
+    np.array([0.85284918844395, 0.31802037944722, -0.41413922782894]),  # 304
+    np.array([0.83121704043107, 0.33042723271945, -0.44709738936207]),  # 070
+    np.array([0.84478490154347, 0.37966205311477, -0.37708778228532]),  # 007
+]
+
+points_on_205 = [
+    np.array([0.85288311315261, 0.46836080771291, -0.2307131316107]),  # 700
+    np.array([0.88845067774003, 0.43315420837694, -0.15176569107879]),  # 007
+    np.array([0.89188942385196, 0.39260214388534, -0.22449234338315]),  # 070
+    np.array([0.85288311315261, 0.46836080771291, -0.2307131316107]),  # 700
+]
+
+points_on_105 = [
+    np.array([0.92293041850093, 0.35671470838645, -0.14475517063813]),  # 700
+    np.array([0.89188951459678, 0.39260200117596, -0.22449223243791]),  # 007
+]
+
+
 
 
 def main(mouse: "Point | None"):
@@ -35,6 +58,17 @@ def main(mouse: "Point | None"):
     )
     target_point = triangle_plane.project_point(goal_direction)
 
+    def draw_tested(points: list[np.ndarray]):
+        for i in range(len(points) - 1):
+            start = vis.from_barycentric(tri_on_plane.barycentric(triangle_plane.project_point(points[i])))
+            end = vis.from_barycentric(tri_on_plane.barycentric(triangle_plane.project_point(points[i + 1])))
+            draw.line(screen, "green", start, end)
+
+    draw_tested(points_on_070)
+    draw_tested(points_on_105)
+    draw_tested(points_on_205)
+    draw_tested(points_on_222)
+
     bar = tri_on_plane.barycentric(target_point)
 
     projected = vis.from_barycentric(bar)
@@ -51,35 +85,35 @@ def main(mouse: "Point | None"):
     log(f"Center: {center}")
     log(f"Mouse: {mouse}")
     vis.draw()
-    vis.draw_normal("green")
+    # vis.draw_normal("green")
     h = vis.height()
 
-    # for i in range(1, 9):
-    #     edge = (vis[0], vis[2])
-    #     n = normalized(edge[0] - edge[1])
-    #     n[0], n[1] = n[1], -n[0]
-    #
-    #     delta = n * i / 8 * vis.height()
-    #
-    #     draw.line(screen, "green", edge[0] + delta, edge[1] + delta)
-    #
-    # for i in range(1, 9):
-    #     edge = (vis[2], vis[1])
-    #     n = normalized(edge[0] - edge[1])
-    #     n[0], n[1] = n[1], -n[0]
-    #
-    #     delta = n * i / 8 * vis.height()
-    #
-    #     draw.line(screen, "teal", edge[0] + delta, edge[1] + delta)
-    #
-    # for i in range(1, 9):
-    #     edge = (vis[1], vis[0])
-    #     n = normalized(edge[0] - edge[1])
-    #     n[0], n[1] = n[1], -n[0]
-    #
-    #     delta = n * i / 8 * vis.height()
-    #
-    #     draw.line(screen, "lavender", edge[0] + delta, edge[1] + delta)
+    for i in range(1, 9):
+        edge = (vis[0], vis[2])
+        n = normalized(edge[0] - edge[1])
+        n[0], n[1] = n[1], -n[0]
+
+        delta = n * i / 8 * vis.height()
+
+        draw.line(screen, "teal", edge[0] + delta, edge[1] + delta)
+
+    for i in range(1, 9):
+        edge = (vis[2], vis[1])
+        n = normalized(edge[0] - edge[1])
+        n[0], n[1] = n[1], -n[0]
+
+        delta = n * i / 8 * vis.height()
+
+        draw.line(screen, "teal", edge[0] + delta, edge[1] + delta)
+
+    for i in range(1, 9):
+        edge = (vis[1], vis[0])
+        n = normalized(edge[0] - edge[1])
+        n[0], n[1] = n[1], -n[0]
+
+        delta = n * i / 8 * vis.height()
+
+        draw.line(screen, "teal", edge[0] + delta, edge[1] + delta)
 
     if mouse is not None and vis.is_inside(mouse):
         scale = 8
@@ -262,10 +296,10 @@ class Line:
         x4, y4 = other.end
 
         x = ((x2 - x1) * (x3 * y4 - y3 * x4) - (x4 - x3) * (x1 * y2 - y1 * x2)) / (
-            (x2 - x1) * (y4 - y3) - (y2 - y1) * (x4 - x3)
+                (x2 - x1) * (y4 - y3) - (y2 - y1) * (x4 - x3)
         )
         y = ((y2 - y1) * (x3 * y4 - y3 * x4) - (y4 - y3) * (x1 * y2 - y1 * x2)) / (
-            (x2 - x1) * (y4 - y3) - (y2 - y1) * (x4 - x3)
+                (x2 - x1) * (y4 - y3) - (y2 - y1) * (x4 - x3)
         )
 
         return np.array([x, y])
@@ -275,6 +309,7 @@ class Line:
         return Line(self.start + delta, self.end + delta)
 
 
+pygame.init()
 font = pygame.font.SysFont(None, 48)
 
 
