@@ -309,7 +309,6 @@ class Line:
         return Line(self.start + delta, self.end + delta)
 
 
-pygame.init()
 font = pygame.font.SysFont(None, 48)
 
 

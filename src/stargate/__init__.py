@@ -1,14 +1,16 @@
 import os.path
-import sys
 import importlib
 
 import pygame
 
-from . import logic
 
 
 def main() -> int:
     pygame.init()
+
+    # import must happen after pygame.init(), so we can use pygame stuff on module level
+    from . import logic
+
     running = True
 
     screen = pygame.display.set_mode(
