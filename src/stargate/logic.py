@@ -6,16 +6,18 @@ import pygame
 from pygame import draw
 import numpy as np
 
-upper_vertex_direction = np.array([0.8506508337159, 0, -0.52573107107952])
-left_vertex_direction = np.array([0.93417235727245, 0.35682209419822, 0])
+SHOW_GRID = True
+
+upper_vertex_direction = np.array([0.8506508337159, 0, -0.52573107107952], dtype="float64")
+left_vertex_direction = np.array([0.93417235727245, 0.35682209419822, 0], dtype="float64")
 right_vertex_direction = np.array(
-    [0.57735041155694, 0.57735018458227, -0.57735021142964]
+    [0.57735041155694, 0.57735018458227, -0.57735021142964], dtype="float64"
 )
 triangle_center_direction = np.array(
-    [0.85296865578697, 0.3373248250886, -0.39831700267993]
+    [0.85296865578697, 0.3373248250886, -0.39831700267993], dtype="float64"
 )
 
-goal_direction = -np.array([-0.93775912744763, -0.30188301187802, 0.17168129291553])
+goal_direction = -np.array([-0.93775912744763, -0.30188301187802, 0.17168129291553], dtype="float64")
 
 points_on_070 = [
     np.array([0.86880679636461, 0.053744337006915, -0.49222585957094]),  # 205
@@ -48,6 +50,7 @@ def main(mouse: "Point | None"):
     center = pt(500, 500)
     show_point(center)
     vis = Triangle.from_center(center, 500)
+    #vis[0] += pt(0,300)
 
     triangle_plane = Plane(triangle_center_direction, 1)
 
@@ -70,15 +73,25 @@ def main(mouse: "Point | None"):
             )
             draw.line(screen, "green", start, end)
 
-    draw_tested(points_on_070)
-    draw_tested(points_on_105)
-    draw_tested(points_on_205)
-    draw_tested(points_on_222)
+    #draw_tested(points_on_070)
+    #draw_tested(points_on_105)
+    #draw_tested(points_on_205)
+    #draw_tested(points_on_222)
 
-    bar = tri_on_plane.barycentric(target_point)
-
-    projected = vis.from_barycentric(bar)
+    if False:
+        vis = tri_on_plane
+        projected = target_point
+    else:
+        bar = tri_on_plane.barycentric(target_point)
+        projected = vis.from_barycentric(bar)
     show_point(projected)
+
+    if SHOW_GRID:
+        for e in range(3):
+            edge = vis.edge(e)
+            delta = vis.height(e)/8
+            for i in range(1,9):
+                edge.shift(i*delta).draw('teal')
 
     t = vis
     scale = 8
@@ -92,34 +105,6 @@ def main(mouse: "Point | None"):
     log(f"Mouse: {mouse}")
     vis.draw()
     # vis.draw_normal("green")
-    h = vis.height()
-
-    for i in range(1, 9):
-        edge = (vis[0], vis[2])
-        n = normalized(edge[0] - edge[1])
-        n[0], n[1] = n[1], -n[0]
-
-        delta = n * i / 8 * vis.height()
-
-        draw.line(screen, "teal", edge[0] + delta, edge[1] + delta)
-
-    for i in range(1, 9):
-        edge = (vis[2], vis[1])
-        n = normalized(edge[0] - edge[1])
-        n[0], n[1] = n[1], -n[0]
-
-        delta = n * i / 8 * vis.height()
-
-        draw.line(screen, "teal", edge[0] + delta, edge[1] + delta)
-
-    for i in range(1, 9):
-        edge = (vis[1], vis[0])
-        n = normalized(edge[0] - edge[1])
-        n[0], n[1] = n[1], -n[0]
-
-        delta = n * i / 8 * vis.height()
-
-        draw.line(screen, "teal", edge[0] + delta, edge[1] + delta)
 
     if mouse is not None and vis.is_inside(mouse):
         scale = 8
@@ -151,7 +136,7 @@ class Triangle:
 
     @classmethod
     def from_center(cls, c: Point, d: float):
-        delta = np.array([d, 0])
+        delta = np.array([d, 0], dtype="float64")
 
         return cls(
             [
@@ -171,9 +156,9 @@ class Triangle:
                 return Line(self[2], self[0])
 
     def coords(self, p: Point, scale: int) -> np.ndarray:
-        h = self.height() / scale
         res = []
         for i in range(3):
+            h = self.height(i) / scale
             edge = self.edge(i)
             d = edge.distance(p)
             c = int(d / h)
@@ -185,22 +170,30 @@ class Triangle:
         for start, end in pairwise(self.vertices + [self.vertices[0]]):
             draw.line(screen, color, start, end)
 
-    def height(self):
-        a = np.linalg.norm(self.vertices[0] - self.vertices[1])
-        return math.sqrt(3) / 2 * a
+    def area(self) -> float:
+        # Herons formula
+        a = self.edge(0).length()
+        b = self.edge(1).length()
+        c = self.edge(2).length()
+        return math.sqrt(4*a*a*b*b - (a*a+b*b-c*c)**2)/4
+
+    def height(self, edge: int):
+        # area = 1/2 * base * height
+        # height = 2*area/base
+        base = self.edge(edge).length()
+        return 2*self.area()/base
 
     def inner_tri(self, coords: np.ndarray, scale: int) -> "Triangle":
-        f = self.height() / scale
         is_upper = sum(coords) == (scale - 1)
 
         if is_upper:
-            l0 = self.edge(0).shift(coords[0] * f)
-            l1 = self.edge(1).shift(coords[1] * f)
-            l2 = self.edge(2).shift(coords[2] * f)
+            l0 = self.edge(0).shift(coords[0] * self.height(0) / scale)
+            l1 = self.edge(1).shift(coords[1] * self.height(1) / scale)
+            l2 = self.edge(2).shift(coords[2] * self.height(2) / scale)
         else:
-            l0 = self.edge(0).shift((coords[0] + 1) * f)
-            l1 = self.edge(1).shift((coords[1] + 1) * f)
-            l2 = self.edge(2).shift((coords[2] + 1) * f)
+            l0 = self.edge(0).shift((coords[0] + 1) * self.height(0) / scale)
+            l1 = self.edge(1).shift((coords[1] + 1) * self.height(1) / scale)
+            l2 = self.edge(2).shift((coords[2] + 1) * self.height(2) / scale)
 
         return Triangle([l0.intersect(l1), l1.intersect(l2), l2.intersect(l0)])
 
@@ -250,6 +243,9 @@ class Triangle:
     def __getitem__(self, i):
         return self.vertices[i]
 
+    def __setitem__(self, i, value):
+        self.vertices[i] = value
+
 
 @dataclass
 class Plane:
@@ -282,6 +278,9 @@ class Line:
         n[0], n[1] = n[1], -n[0]
 
         return n
+
+    def length(self) -> float:
+        return np.linalg.norm(self.end - self.start)
 
     def distance(self, p: Point) -> float:
         delta = p - self.start
