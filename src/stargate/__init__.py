@@ -1,5 +1,6 @@
 import os.path
 import importlib
+import traceback
 
 import pygame
 
@@ -35,7 +36,7 @@ def main() -> int:
             try:
                 logic.update(screen)
             except Exception as e:
-                print(e)
+                traceback.print_exception(e)
                 has_working_module = False
 
         pygame.display.flip()
@@ -63,6 +64,6 @@ def reload_module(module, cache={}) -> bool:
                 importlib.reload(module)
                 return True
             except Exception as e:
-                print(e)
+                traceback.print_exception(e)
                 return False
     return None
